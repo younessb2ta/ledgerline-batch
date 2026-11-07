@@ -12,7 +12,7 @@ eventforge ──► local CSV + manifest ──► GX gate ──► BigQuery s
 
 The default path is **zero-cost**: BigQuery sandbox (no billing account), local file loads, local Terraform state. GCS and Composer are optional paid upgrades — see `infra/README.md`.
 
-This repo currently contains **Phase 0**: the deterministic event generator and the repository skeleton. Nothing here talks to GCP yet.
+This repo currently contains **Phases 0–2**: the deterministic generator, the zero-cost Terraform layout, and the ingestion path with its Great Expectations gate. dbt models come next.
 
 Phase 0 exit criteria:
 
@@ -44,6 +44,31 @@ make gen-day INCIDENT=duplicate_pk
 make gen-day INCIDENT=stale
 ```
 
+## Ingest and quality gate
+
+```bash
+make validate START=2026-11-01     # GX gate only; exits 1 on any failure
+make load START=2026-11-01         # validate passes → CSV load jobs into raw_*
+```
+
+Both read `data/raw/<day>/manifest.json` and target `$PROJECT` (defaults to the active `gcloud` project).
+
+The gate writes one row per expectation to `ops.dq_results` (`run_id`, `table_name`, `expectation`, `success`, `observed`, `expected`). It checks:
+
+| Check | Catches |
+|---|---|
+| column set + per-column existence | `schema_drift` |
+| primary key / composite key uniqueness | `duplicate_pk` |
+| required and timestamp-regex checks | producer contract breaks |
+| accepted values, non-negative money | domain violations |
+| row count vs manifest | file tampering / partial writes |
+| row count vs ground-truth baseline | `truncated` (a truncated file has a matching smaller manifest) |
+| `raw_orders.order_ts` within the batch day | `stale` |
+
+`make test` runs the gate against all four incidents and asserts exit code 1, plus the clean-day case at exit 0.
+
+Idempotency: `ingest.load_day` skips tables already marked `success` for the `(batch_id, table_name)` pair in `ops.load_audit`, so a partial failure resumes without duplicating rows. Writes are load jobs only — the sandbox has no DML.
+
 ## Output contract
 
 Each day is written to `data/raw/<YYYY-MM-DD>/`:
@@ -72,8 +97,8 @@ Each day is written to `data/raw/<YYYY-MM-DD>/`:
 
 ```
 packages/eventforge/     deterministic generator (installed by ledgerline-stream too)
-ingest/                  GCS upload, GX validation, BigQuery load        [Phase 2]
-dq/                      GX suites + runbooks                            [Phase 2/4]
+ingest/                  CSV load jobs, GX gate, BigQuery helpers
+dq/                      GX suites + runbooks                            [Phase 4]
 warehouse/               dbt project                                     [Phase 3]
 orchestration/           Airflow DAGs + Slack callback                    [Phase 4]
 infra/                   Terraform                                        [Phase 1]

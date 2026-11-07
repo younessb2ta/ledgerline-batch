@@ -3,7 +3,16 @@ name = "ledgerline-batch"
 version = "0.1.0"
 description = "Batch ELT, warehouse models, and data quality for the Ledgerline platform"
 requires-python = ">=3.11"
-dependencies = ["eventforge"]
+dependencies = [
+    "eventforge",
+    "google-cloud-bigquery>=3.25",
+    "great-expectations>=1.3",
+    "pandas>=2.2",
+    # cryptography >= 49 publishes arm64-only macOS wheels; this dev box is
+    # Intel/macOS 12 and would have to compile OpenSSL + Rust from source.
+    # 48.0.1 still ships a universal2 wheel. Constraint only, not a direct use.
+    "cryptography<49",
+]
 
 [dependency-groups]
 dev = [
@@ -30,5 +39,6 @@ src = ["packages/eventforge/src"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/eventforge/tests"]
+testpaths = ["packages/eventforge/tests", "ingest/tests"]
+pythonpath = ["."]
 addopts = "-q"

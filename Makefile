@@ -6,7 +6,9 @@ OUT ?= data/raw
 INCIDENT ?= none
 TRUNCATE_PCT ?= 0.6
 
-.PHONY: install hooks test lint fmt gen gen-day clean
+PROJECT ?= $(shell gcloud config get-value project 2>/dev/null)
+
+.PHONY: install hooks test lint fmt gen gen-day load validate clean
 
 install:
 	$(UV) sync
@@ -31,6 +33,12 @@ gen:
 gen-day:
 	$(UV) run eventforge batch --seed $(SEED) --start $(START) --days 1 \
 		--out $(OUT) --incident $(INCIDENT) --truncate-pct $(TRUNCATE_PCT)
+
+load: validate
+	$(UV) run python -m ingest.load_day --day-dir $(OUT)/$(START) --project $(PROJECT)
+
+validate:
+	$(UV) run python -m ingest.validate --day-dir $(OUT)/$(START) --project $(PROJECT)
 
 clean:
 	rm -rf data/raw .pytest_cache .ruff_cache
