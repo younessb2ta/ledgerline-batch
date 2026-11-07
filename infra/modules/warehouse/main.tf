@@ -21,6 +21,12 @@ variable "datasets" {
   }))
 }
 
+variable "create_bucket" {
+  description = "Create the GCS landing bucket. Requires billing; off on the free path."
+  type        = bool
+  default     = false
+}
+
 resource "google_bigquery_dataset" "datasets" {
   for_each = var.datasets
 
@@ -36,6 +42,8 @@ resource "google_bigquery_dataset" "datasets" {
 }
 
 resource "google_storage_bucket" "landing" {
+  count = var.create_bucket ? 1 : 0
+
   name                        = "${var.project_id}-ledgerline-landing"
   location                    = var.region
   uniform_bucket_level_access = true
@@ -57,5 +65,5 @@ output "dataset_ids" {
 }
 
 output "landing_bucket" {
-  value = google_storage_bucket.landing.name
+  value = try(google_storage_bucket.landing[0].name, null)
 }

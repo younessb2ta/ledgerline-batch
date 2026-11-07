@@ -1,34 +1,61 @@
 # Infrastructure
 
-Two-stage Terraform setup:
+Terraform for the Ledgerline platform, with a **zero-cost default path**.
 
-1. **`bootstrap/`** — local state. Enables APIs and creates the GCS bucket that will hold the real state. Run once per project.
-2. **`envs/dev/`** — remote GCS state. Datasets, landing bucket, service accounts, Workload Identity Federation, budget alerts.
+## Free path (default)
+
+| Concern | Choice |
+|---|---|
+| Warehouse | BigQuery **sandbox** — no billing account, 1 TiB queries/month, 10 GiB storage, 60-day expiry |
+| Data landing | Local CSV → BigQuery load job (no GCS) |
+| Terraform state | Local, gitignored |
+| Orchestration | GitHub Actions + local Airflow (no Composer) |
+| Budget alerts | Not available without billing (documented in `COST.md`) |
 
 ```bash
-make bootstrap        # first time only, local state
-make init             # reads the state bucket from bootstrap output
+cp envs/dev/terraform.tfvars.example envs/dev/terraform.tfvars   # set project_id
+make init
 make validate
 make plan
 make apply
 ```
 
-## Why two stages
+What gets created: APIs (BigQuery, IAM), datasets `raw`/`staging`/`marts`/`ops`, three service accounts, project IAM, and a GitHub OIDC workload identity pool. No billable resources.
 
-Terraform can't store its state in a bucket it hasn't created yet. The standard resolution is a small bootstrap layer with local state, then `-backend-config` for the real environment. The bootstrap layer is intentionally tiny and rarely changes.
+### Sandbox constraints that shape the design
+
+- **No DML** → no dbt incremental models, no snapshots. Every model is a `table` or `view`.
+- **No streaming inserts** → the batch path uses load jobs. (The streaming project runs entirely locally.)
+- **No GCS** → the loader uploads local files directly to BigQuery.
+- **60-day expiry** → demo data is disposable; the pipeline is re-runnable from a seed.
+
+## Paid path (optional upgrade)
+
+If you attach a billing account later:
+
+1. `cp envs/dev/terraform.tfvars.example envs/dev/terraform.tfvars` and set:
+   ```hcl
+   create_landing_bucket = true
+   enable_budget         = true
+   billing_account_id    = "XXXXXX-XXXXXX-XXXXXX"
+   ```
+2. `make bootstrap` — creates the `gs://<project>-tfstate` bucket.
+3. Migrate state:
+   ```bash
+   terraform -chdir=envs/dev init -migrate-state \
+     -backend-config="bucket=$(terraform -chdir=bootstrap output -raw state_bucket)"
+   ```
+   and replace the `local` backend in `envs/dev/backend.tf` with the `gcs` block.
+4. `make apply`.
+
+This unlocks GCS, budget alerts, and (with a separate module) Composer.
 
 ## Ownership boundary
 
 | Owner | Resources |
 |---|---|
-| Terraform | datasets, landing bucket, IAM, service accounts, WIF, budgets, API enablement |
+| Terraform | datasets, IAM, service accounts, WIF, API enablement, optional bucket/budget |
 | dbt | tables and views inside `staging` and `marts` |
 | ingestion jobs | tables inside `raw` and `ops` |
 
-This is deliberate. dbt already owns table DDL and lineage; duplicating it in Terraform creates two sources of truth. Terraform owns the blast radius (who can read/write, how long data lives, how much it costs), dbt owns the transformation layer.
-
-## Before apply
-
-- `gcloud auth application-default login` must be done.
-- `terraform.tfvars` must exist in `envs/dev/` (copy `terraform.tfvars.example`).
-- The GitHub repo must match `github_repo` for the WIF attribute condition.
+Terraform owns the blast radius (who can read/write, retention, cost); dbt owns transformation DDL. Duplicating table DDL in both would create two sources of truth.

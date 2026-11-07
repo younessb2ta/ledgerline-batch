@@ -1,6 +1,10 @@
-project_id         = "your-project-id"
-billing_account_id  = "XXXXXX-XXXXXX-XXXXXX"
-region              = "us-central1"
-bq_location         = "US"
-budget_amount_usd   = 50
-github_repo         = "younessb2ta/ledgerline-batch"
+project_id = "your-project-id"
+region     = "us-central1"
+bq_location = "US"
+github_repo = "younessb2ta/ledgerline-batch"
+
+# Paid path only (requires a billing account):
+create_landing_bucket = false
+enable_budget         = false
+# billing_account_id  = "XXXXXX-XXXXXX-XXXXXX"
+# budget_amount_usd   = 50

@@ -9,3 +9,11 @@ artifacts/
 .DS_Store
 *.log
 target/
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example

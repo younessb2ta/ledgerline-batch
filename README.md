@@ -3,12 +3,14 @@
 Batch ELT, warehouse models, and data quality for the Ledgerline platform.
 
 ```
-eventforge ──► GCS landing ──► GX gate ──► BigQuery raw ──► dbt (staging → marts)
-                                  │                              │
-                                  └── ops.dq_results             ├── dbt tests
-                                                                 ├── dbt docs → GitHub Pages
-                                                                 └── Airflow / Composer
+eventforge ──► local CSV + manifest ──► GX gate ──► BigQuery sandbox raw ──► dbt (staging → marts)
+                                             │                                   │
+                                             └── ops.dq_results                  ├── dbt tests
+                                                                                 ├── dbt docs → GitHub Pages
+                                                                                 └── GitHub Actions / Airflow
 ```
+
+The default path is **zero-cost**: BigQuery sandbox (no billing account), local file loads, local Terraform state. GCS and Composer are optional paid upgrades — see `infra/README.md`.
 
 This repo currently contains **Phase 0**: the deterministic event generator and the repository skeleton. Nothing here talks to GCP yet.
 
