@@ -1,0 +1,34 @@
+[project]
+name = "ledgerline-batch"
+version = "0.1.0"
+description = "Batch ELT, warehouse models, and data quality for the Ledgerline platform"
+requires-python = ">=3.11"
+dependencies = ["eventforge"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=3.7",
+    "pytest>=8.2",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/eventforge"]
+
+[tool.uv.sources]
+eventforge = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["packages/eventforge/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/eventforge/tests"]
+addopts = "-q"

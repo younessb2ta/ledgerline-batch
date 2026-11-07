@@ -1,0 +1,19 @@
+[project]
+name = "eventforge"
+version = "0.1.0"
+description = "Deterministic e-commerce event and batch data generator"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+kafka = ["confluent-kafka>=2.3"]
+
+[project.scripts]
+eventforge = "eventforge.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eventforge"]
