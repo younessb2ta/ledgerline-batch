@@ -1,0 +1,6 @@
+project_id         = "your-project-id"
+billing_account_id  = "XXXXXX-XXXXXX-XXXXXX"
+region              = "us-central1"
+bq_location         = "US"
+budget_amount_usd   = 50
+github_repo         = "younessb2ta/ledgerline-batch"
