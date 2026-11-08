@@ -45,6 +45,7 @@ testpaths = [
     "ingest/tests",
     "dq/tests",
     "orchestration/tests",
+    "bench/tests",
 ]
 pythonpath = ["."]
 addopts = "-q"

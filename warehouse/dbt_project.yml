@@ -26,3 +26,6 @@ models:
 vars:
   # Money is integer cents everywhere. Never cast to FLOAT for storage.
   currency: USD
+  # Operational gates (see docs/adr/0007-volume-anomaly-detection.md).
+  volume_tolerance_pct: 0.3
+  freshness_sla_hours: 26

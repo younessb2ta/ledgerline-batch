@@ -1,0 +1,5 @@
+table_name,expectation,observed,expected,checked_at
+raw_order_items,volume.row_count_vs_baseline,1189,1965,2026-11-08 12:13:05
+raw_orders,volume.row_count_vs_baseline,480,800,2026-11-08 12:13:05
+raw_payments,volume.row_count_vs_baseline,462,774,2026-11-08 12:13:05
+raw_returns,volume.row_count_vs_baseline,14,27,2026-11-08 12:13:05

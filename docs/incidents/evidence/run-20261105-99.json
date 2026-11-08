@@ -1,0 +1,16 @@
+{
+  "batch_id": "20261105-99",
+  "project": "ledgerline-514016",
+  "day_dir": "/Users/hachimi/Desktop/my-opencode-project/ledgerline-batch/artifacts/incidents/truncated/2026-11-05",
+  "failed": true,
+  "total_seconds": 7.09,
+  "stages": [
+    {
+      "stage": "gx",
+      "exit_code": 1,
+      "seconds": 7.09,
+      "detail": ""
+    }
+  ],
+  "finished_at": "2026-11-08T12:13:12+00:00"
+}
