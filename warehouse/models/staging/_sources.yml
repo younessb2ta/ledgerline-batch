@@ -1,0 +1,44 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Append-only landing tables written by `ingest.load_day` as BigQuery load
+      jobs. No transformations happen here; every model in `staging` dedupes
+      and casts.
+    database: "{{ target.project }}"
+    schema: raw
+
+    tables:
+      - name: raw_customers
+        description: One row per customer per load (dedupe on customer_id).
+        columns:
+          - name: customer_id
+            tests: [not_null]
+      - name: raw_products
+        description: Product catalogue snapshot.
+        columns:
+          - name: product_id
+            tests: [not_null]
+      - name: raw_orders
+        description: Order headers, one row per order per load.
+        columns:
+          - name: order_id
+            tests: [not_null]
+      - name: raw_order_items
+        description: Order lines. One line per (order_id, product_id) is a generator invariant.
+        columns:
+          - name: order_id
+            tests: [not_null]
+          - name: product_id
+            tests: [not_null]
+      - name: raw_payments
+        description: Payment attempts. `status` is succeeded or refunded.
+        columns:
+          - name: payment_id
+            tests: [not_null]
+      - name: raw_returns
+        description: Refunds issued against paid orders.
+        columns:
+          - name: return_id
+            tests: [not_null]

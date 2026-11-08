@@ -7,8 +7,14 @@ INCIDENT ?= none
 TRUNCATE_PCT ?= 0.6
 
 PROJECT ?= $(shell gcloud config get-value project 2>/dev/null)
+export GCP_PROJECT ?= $(PROJECT)
+export BQ_LOCATION ?= US
 
-.PHONY: install hooks test lint fmt gen gen-day load validate clean
+DBT = cd warehouse && $(UV) run dbt
+DBT_FLAGS ?= --profiles-dir .
+
+.PHONY: install hooks test lint fmt gen gen-day load validate \
+	dbt-debug dbt-run dbt-test dbt-build dbt-docs clean
 
 install:
 	$(UV) sync
@@ -40,5 +46,22 @@ load: validate
 validate:
 	$(UV) run python -m ingest.validate --day-dir $(OUT)/$(START) --project $(PROJECT)
 
+# --- warehouse --------------------------------------------------------------
+
+dbt-debug:
+	$(DBT) debug $(DBT_FLAGS)
+
+dbt-run:
+	$(DBT) run $(DBT_FLAGS)
+
+dbt-test:
+	$(DBT) test $(DBT_FLAGS)
+
+dbt-build:
+	$(DBT) build $(DBT_FLAGS)
+
+dbt-docs:
+	$(DBT) docs generate $(DBT_FLAGS)
+
 clean:
-	rm -rf data/raw .pytest_cache .ruff_cache
+	rm -rf data/raw .pytest_cache .ruff_cache warehouse/target warehouse/logs

@@ -12,7 +12,7 @@ eventforge ──► local CSV + manifest ──► GX gate ──► BigQuery s
 
 The default path is **zero-cost**: BigQuery sandbox (no billing account), local file loads, local Terraform state. GCS and Composer are optional paid upgrades — see `infra/README.md`.
 
-This repo currently contains **Phases 0–2**: the deterministic generator, the zero-cost Terraform layout, and the ingestion path with its Great Expectations gate. dbt models come next.
+This repo currently contains **Phases 0–3**: the deterministic generator, the zero-cost Terraform layout, the ingestion path with its Great Expectations gate, and the dbt star schema with its own test gate.
 
 Phase 0 exit criteria:
 
@@ -69,6 +69,32 @@ The gate writes one row per expectation to `ops.dq_results` (`run_id`, `table_na
 
 Idempotency: `ingest.load_day` skips tables already marked `success` for the `(batch_id, table_name)` pair in `ops.load_audit`, so a partial failure resumes without duplicating rows. Writes are load jobs only — the sandbox has no DML.
 
+> `make` needs Xcode Command Line Tools on macOS. If `make` is unavailable, run the underlying commands directly, e.g. `uv run python -m ingest.validate --day-dir data/raw/2026-11-01 --project <project>`.
+
+## Warehouse (dbt)
+
+```bash
+cd warehouse
+GCP_PROJECT=<project> uv run dbt build --profiles-dir .   # run + all tests
+GCP_PROJECT=<project> uv run dbt docs generate --profiles-dir . && uv run dbt docs serve --profiles-dir .
+```
+
+| Layer | Materialization | Models |
+|---|---|---|
+| staging | view | `stg_customers`, `stg_products`, `stg_orders`, `stg_order_items`, `stg_payments`, `stg_returns` — dedupe on natural keys, cast, normalize |
+| intermediate | view | `int_order_financials` — order-level rollup, one row per order, no join fan-out |
+| marts | table | `dim_customers`, `dim_products`, `dim_date`, `fct_orders`, `fct_order_items`, `fct_returns` |
+
+Star schema: `fct_orders` is order-grain, `fct_order_items` is line-grain, `fct_returns` is refund-grain. All money columns are integer cents. `dim_date` is a conformed spine over order and refund dates.
+
+Gate 2 — 55 tests, including three singular tests that a column-level suite cannot express:
+
+- every non-cancelled order's line total equals its payment (`assert_order_totals_match_payments`) — catches join fan-out and duplicated line loads
+- refunds never exceed the payment they reverse, and cancelled orders carry no payment (`assert_refunds_within_payments`)
+- no negative or zero-quantity money rows (`assert_non_negative_amounts`)
+
+Sandbox constraints are encoded in `dbt_project.yml`: marts are `table`, staging is `view`; there are no incremental models or snapshots because the sandbox rejects DML. `maximum_bytes_billed` in `profiles.yml` is a hard 1 GB cost guard per query. Exposures declare the dashboard and reconciliation report, so `dbt docs` shows lineage from `raw_*` to the dashboard.
+
 ## Output contract
 
 Each day is written to `data/raw/<YYYY-MM-DD>/`:
@@ -98,8 +124,8 @@ Each day is written to `data/raw/<YYYY-MM-DD>/`:
 ```
 packages/eventforge/     deterministic generator (installed by ledgerline-stream too)
 ingest/                  CSV load jobs, GX gate, BigQuery helpers
-dq/                      GX suites + runbooks                            [Phase 4]
-warehouse/               dbt project                                     [Phase 3]
+warehouse/               dbt project (staging → intermediate → marts)
+dq/                      alerting + quality runbooks                     [Phase 4]
 orchestration/           Airflow DAGs + Slack callback                    [Phase 4]
 infra/                   Terraform                                        [Phase 1]
 bench/                   BigQuery partition/cluster cost benchmark        [Phase 5]

@@ -1,0 +1,22 @@
+# Local development profile. Auth uses Application Default Credentials
+# (`gcloud auth application-default login`), so no keys are stored here.
+#
+# maximum_bytes_billed is a hard cost guard: the sandbox allows 1 TiB of
+# queries per month; no single dbt query may scan more than 1 GB.
+ledgerline:
+  target: sandbox
+  outputs:
+    sandbox:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT', 'ledgerline-514016') }}"
+      dataset: marts
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+      maximum_bytes_billed: 1000000000
+      job_retries: 1
+      labels:
+        platform: ledgerline
+        env: dev

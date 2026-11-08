@@ -44,7 +44,7 @@ def already_loaded(warehouse: Warehouse, batch_id: str) -> set[str]:
     rows = warehouse.query(
         f"""
         SELECT table_name
-        FROM `{warehouse.table_id('ops', 'load_audit')}`
+        FROM `{warehouse.table_id("ops", "load_audit")}`
         WHERE batch_id = @batch_id AND status = 'success'
         """,
         {"batch_id": batch_id},

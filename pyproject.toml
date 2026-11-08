@@ -12,6 +12,7 @@ dependencies = [
     # Intel/macOS 12 and would have to compile OpenSSL + Rust from source.
     # 48.0.1 still ships a universal2 wheel. Constraint only, not a direct use.
     "cryptography<49",
+    "dbt-bigquery>=1.9,<2",
 ]
 
 [dependency-groups]

@@ -1,0 +1,32 @@
+version: 2
+
+exposures:
+  - name: revenue_dashboard
+    label: Ledgerline revenue dashboard
+    type: dashboard
+    maturity: medium
+    description: >
+      Daily revenue, order status mix, and refund rate. Reads only from marts;
+      the streaming project's dashboard reads its own provisional tables.
+    depends_on:
+      - ref('fct_orders')
+      - ref('fct_returns')
+      - ref('dim_customers')
+      - ref('dim_products')
+      - ref('dim_date')
+    owner:
+      name: younessb2ta
+      email: youness.bgamer@gmail.com
+
+  - name: reconciliation_report
+    label: Batch vs streaming reconciliation
+    type: analysis
+    maturity: low
+    description: >
+      Compares batch marts against the streaming ledger rebuilt from the same
+      event stream. Both paths consume the same eventforge seed.
+    depends_on:
+      - ref('fct_orders')
+    owner:
+      name: younessb2ta
+      email: youness.bgamer@gmail.com
