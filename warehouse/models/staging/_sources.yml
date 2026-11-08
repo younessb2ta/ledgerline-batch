@@ -42,3 +42,14 @@ sources:
         columns:
           - name: return_id
             tests: [not_null]
+
+  - name: ops
+    description: Operational metadata written by ingestion and the quality gate.
+    database: "{{ target.project }}"
+    schema: ops
+
+    tables:
+      - name: load_audit
+        description: One row per (batch_id, table_name) load attempt.
+      - name: dq_results
+        description: One row per GX expectation result.

@@ -12,7 +12,7 @@ eventforge ──► local CSV + manifest ──► GX gate ──► BigQuery s
 
 The default path is **zero-cost**: BigQuery sandbox (no billing account), local file loads, local Terraform state. GCS and Composer are optional paid upgrades — see `infra/README.md`.
 
-This repo currently contains **Phases 0–3**: the deterministic generator, the zero-cost Terraform layout, the ingestion path with its Great Expectations gate, and the dbt star schema with its own test gate.
+This repo currently contains **Phases 0–4**: the deterministic generator, the zero-cost Terraform layout, the ingestion path with its Great Expectations gate, the dbt star schema, and the operational layer (freshness/volume gates, Slack alerting, runbooks, orchestration).
 
 Phase 0 exit criteria:
 
@@ -95,6 +95,26 @@ Gate 2 — 55 tests, including three singular tests that a column-level suite ca
 
 Sandbox constraints are encoded in `dbt_project.yml`: marts are `table`, staging is `view`; there are no incremental models or snapshots because the sandbox rejects DML. `maximum_bytes_billed` in `profiles.yml` is a hard 1 GB cost guard per query. Exposures declare the dashboard and reconciliation report, so `dbt docs` shows lineage from `raw_*` to the dashboard.
 
+## Orchestration and alerting
+
+```bash
+uv run python -m orchestration.run_pipeline \
+  --day-dir data/raw/2026-11-01 --project <project> --dry-run-alerts
+```
+
+Stage order is a gate chain: GX validate → BigQuery load → `dbt build` (models + 57 tests). A failure stops the pipeline, writes a JSON run summary to `artifacts/runs/`, and sends a Slack alert that links the matching runbook. The GX gate runs first, so bad data never reaches `raw_*`; `dbt build` re-checks invariants at the mart layer.
+
+Operational tests added in this phase:
+
+| Test | Catches |
+|---|---|
+| `assert_pipeline_freshness` | no successful load inside `freshness_sla_hours` (default 26 h) — wall-clock staleness |
+| `assert_daily_volume_within_band` | a day deviating from its trailing 7-day average by more than `volume_tolerance_pct` (default 0.3) |
+
+Slack is optional. With `SLACK_WEBHOOK_URL` set (env or repo secret) the alert posts; without it the payload prints, so the runbook path is testable locally. `RUN_URL` adds a link to the CI run. See [`docs/runbooks/`](docs/runbooks/) for triage and recovery.
+
+Deployment wrappers: `.github/workflows/pipeline.yml` (scheduled, keyless WIF auth) and `orchestration/dags/ledgerline_batch.py` (Airflow, for environments that have it). `orchestration/run_pipeline.py` is the single implementation both call.
+
 ## Output contract
 
 Each day is written to `data/raw/<YYYY-MM-DD>/`:
@@ -124,9 +144,10 @@ Each day is written to `data/raw/<YYYY-MM-DD>/`:
 ```
 packages/eventforge/     deterministic generator (installed by ledgerline-stream too)
 ingest/                  CSV load jobs, GX gate, BigQuery helpers
+dq/                      Slack alerting + alert policy
 warehouse/               dbt project (staging → intermediate → marts)
-dq/                      alerting + quality runbooks                     [Phase 4]
-orchestration/           Airflow DAGs + Slack callback                    [Phase 4]
+orchestration/           pipeline runner, Airflow DAG
+docs/runbooks/           on-call triage and recovery per alert
 infra/                   Terraform                                        [Phase 1]
 bench/                   BigQuery partition/cluster cost benchmark        [Phase 5]
 docs/adr, docs/incidents ADRs and real-incident postmortems               [Phase 5]

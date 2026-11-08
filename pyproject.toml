@@ -40,6 +40,11 @@ src = ["packages/eventforge/src"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
-testpaths = ["packages/eventforge/tests", "ingest/tests"]
+testpaths = [
+    "packages/eventforge/tests",
+    "ingest/tests",
+    "dq/tests",
+    "orchestration/tests",
+]
 pythonpath = ["."]
 addopts = "-q"
