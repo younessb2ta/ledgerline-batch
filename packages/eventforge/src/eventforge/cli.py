@@ -59,6 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
     kafka.add_argument("--late-pct", type=float, default=0.0)
     kafka.add_argument("--late-seconds", type=int, default=300)
     kafka.add_argument("--no-shuffle", action="store_true")
+    kafka.add_argument(
+        "--sort",
+        action="store_true",
+        help="produce in event_ts order (deterministic replay; implies --no-shuffle)",
+    )
 
     return parser
 
@@ -130,6 +135,7 @@ def _run_kafka(args: argparse.Namespace) -> int:
         late_pct=args.late_pct,
         late_seconds=args.late_seconds,
         shuffle=not args.no_shuffle,
+        sort=args.sort,
     )
     print(f"sent {sent} events to {args.bootstrap}/{args.topic}")
     return 0

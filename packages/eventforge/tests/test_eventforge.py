@@ -150,3 +150,17 @@ def test_ground_truth_survives_truncation(tmp_path):
 
     assert manifest["totals"]["orders"] < truth["orders"]
     assert truth["incident"] == {"type": "truncated", "truncate_pct": 0.9}
+
+
+def test_sorted_replay_is_non_decreasing_and_complete():
+    from eventforge.kafka import ordered_events
+
+    events = ordered_events(SMALL, shuffle=False, sort=True)
+    stamps = [event.event_ts for event in events]
+
+    assert stamps == sorted(stamps)
+    # Sorting changes order, never membership.
+    expected = {event.event_id for event in generate_day(SMALL, SMALL.start_date).events}
+    assert {event.event_id for event in events} == expected
+    # sort wins over shuffle, so a replay is reproducible.
+    assert ordered_events(SMALL, shuffle=True, sort=True) == events

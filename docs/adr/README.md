@@ -15,4 +15,5 @@ inevitable.
 | [0009](0009-dbt-table-view-only.md) | dbt models are tables/views only; no incremental or snapshots | Accepted |
 
 Reserved for the streaming phase: 0004 RocksDB/incremental checkpoints,
-0005 late data (side output + restatement).
+0005 late data (side output + restatement) — written in
+`../../ledgerline-stream/docs/adr/`.

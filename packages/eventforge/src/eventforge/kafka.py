@@ -15,6 +15,24 @@ def _shift_back(ts: str, seconds: int) -> str:
     return iso_utc(parsed - timedelta(seconds=seconds))
 
 
+def ordered_events(
+    cfg: GeneratorConfig, *, shuffle: bool = True, sort: bool = False
+) -> list:
+    """Return the events in the order they should be produced.
+
+    ``sort`` wins over ``shuffle``. A stable timestamp order is what a replay
+    needs: the generator appends returns after the orders they belong to, so
+    refunds can carry timestamps days earlier than the preceding record. Fed to
+    a watermark assigner that looks like real lateness, which is a lie.
+    """
+    events = list(generate_events(cfg))
+    if sort:
+        events.sort(key=lambda event: (event.event_ts, event.event_id))
+    elif shuffle:
+        random.Random(cfg.seed).shuffle(events)
+    return events
+
+
 def produce(
     cfg: GeneratorConfig,
     *,
@@ -25,6 +43,7 @@ def produce(
     late_pct: float = 0.0,
     late_seconds: int = 300,
     shuffle: bool = True,
+    sort: bool = False,
 ) -> int:
     """Produce events to Kafka. Returns the number of messages sent."""
     try:
@@ -40,9 +59,7 @@ def produce(
         }
     )
 
-    events = list(generate_events(cfg))
-    if shuffle:
-        random.Random(cfg.seed).shuffle(events)
+    events = ordered_events(cfg, shuffle=shuffle, sort=sort)
 
     late_rng = random.Random(f"{cfg.seed}:late")
     interval = 1.0 / rate if rate > 0 else 0.0
