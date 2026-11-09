@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 import random
 import time
+from collections.abc import Iterable, Iterator
 from dataclasses import replace
 from datetime import datetime, timedelta
 
 from .generator import GeneratorConfig, generate_events
-from .model import iso_utc
+from .model import Event, iso_utc
 
 
 def _shift_back(ts: str, seconds: int) -> str:
@@ -15,9 +16,7 @@ def _shift_back(ts: str, seconds: int) -> str:
     return iso_utc(parsed - timedelta(seconds=seconds))
 
 
-def ordered_events(
-    cfg: GeneratorConfig, *, shuffle: bool = True, sort: bool = False
-) -> list:
+def ordered_events(cfg: GeneratorConfig, *, shuffle: bool = True, sort: bool = False) -> list:
     """Return the events in the order they should be produced.
 
     ``sort`` wins over ``shuffle``. A stable timestamp order is what a replay
@@ -31,6 +30,39 @@ def ordered_events(
     elif shuffle:
         random.Random(cfg.seed).shuffle(events)
     return events
+
+
+def apply_lateness(
+    events: Iterable[Event],
+    *,
+    late_pct: float,
+    late_seconds: int,
+    seed: int,
+) -> Iterator[Event]:
+    """Re-stamp a deterministic subset of events behind the newest event.
+
+    ``events`` must already be in the order they will be produced. A selected
+    record is stamped ``late_seconds`` behind the newest timestamp produced so
+    far, not behind its own timestamp. That distinction matters: the stream is
+    sparse, so an event that is 300 s older than *itself* can still be newer
+    than the previous record and therefore not late at all. Anchoring to the
+    newest event makes every selected record unambiguously late for a bounded
+    out-of-orderness watermark, so the classification does not depend on how
+    dense the surrounding events happen to be.
+
+    Membership and amounts are unchanged: only ``event_ts`` moves. The
+    generator's ground-truth totals therefore still apply.
+    """
+    rng = random.Random(f"{seed}:late")
+    newest: str | None = None
+    for event in events:
+        selected = late_pct > 0 and rng.random() < late_pct
+        # The first event has no predecessor to be behind; it stays on time.
+        if selected and newest is not None:
+            yield replace(event, event_ts=_shift_back(newest, late_seconds))
+            continue
+        newest = event.event_ts if newest is None else max(newest, event.event_ts)
+        yield event
 
 
 def produce(
@@ -59,9 +91,13 @@ def produce(
         }
     )
 
-    events = ordered_events(cfg, shuffle=shuffle, sort=sort)
+    events = apply_lateness(
+        ordered_events(cfg, shuffle=shuffle, sort=sort),
+        late_pct=late_pct,
+        late_seconds=late_seconds,
+        seed=cfg.seed,
+    )
 
-    late_rng = random.Random(f"{cfg.seed}:late")
     interval = 1.0 / rate if rate > 0 else 0.0
     started = time.monotonic()
     sent = 0
@@ -69,9 +105,6 @@ def produce(
     for event in events:
         if duration is not None and time.monotonic() - started >= duration:
             break
-
-        if late_pct and late_rng.random() < late_pct:
-            event = replace(event, event_ts=_shift_back(event.event_ts, late_seconds))
 
         producer.produce(
             topic,

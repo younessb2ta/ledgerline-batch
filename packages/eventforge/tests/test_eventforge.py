@@ -164,3 +164,39 @@ def test_sorted_replay_is_non_decreasing_and_complete():
     assert {event.event_id for event in events} == expected
     # sort wins over shuffle, so a replay is reproducible.
     assert ordered_events(SMALL, shuffle=True, sort=True) == events
+
+
+def test_late_events_are_anchored_to_the_newest_timestamp():
+    from eventforge.kafka import _shift_back, apply_lateness, ordered_events
+
+    events = ordered_events(SMALL, shuffle=False, sort=True)
+    produced = list(apply_lateness(events, late_pct=0.25, late_seconds=300, seed=SMALL.seed))
+
+    # Re-stamping changes timestamps, never membership or order.
+    assert [event.event_id for event in produced] == [event.event_id for event in events]
+
+    originals = {event.event_id: event.event_ts for event in events}
+    newest = None
+    late = 0
+    for event in produced:
+        if newest is not None and event.event_ts < newest:
+            late += 1
+            # Anchored to the stream, not to the event's own old timestamp:
+            # every displaced record is exactly late_seconds behind the newest.
+            assert event.event_ts == _shift_back(newest, 300)
+        else:
+            assert event.event_ts == originals[event.event_id]
+        newest = event.event_ts if newest is None else max(newest, event.event_ts)
+
+    assert late > 0
+    assert late <= len(events) // 4 + 1
+
+
+def test_late_data_shift_is_deterministic():
+    from eventforge.kafka import apply_lateness, ordered_events
+
+    events = ordered_events(SMALL, shuffle=False, sort=True)
+    first = list(apply_lateness(events, late_pct=0.25, late_seconds=300, seed=SMALL.seed))
+    second = list(apply_lateness(events, late_pct=0.25, late_seconds=300, seed=SMALL.seed))
+
+    assert first == second
