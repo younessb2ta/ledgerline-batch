@@ -81,6 +81,14 @@ GCP_PROJECT=<project> uv run dbt build --profiles-dir .   # run + all tests
 GCP_PROJECT=<project> uv run dbt docs generate --profiles-dir . && uv run dbt docs serve --profiles-dir .
 ```
 
+The generated lineage site is committed at
+[`docs/dbt/index.html`](docs/dbt/index.html) and refreshed with `make docs-site`.
+`.github/workflows/docs.yml` deploys it to GitHub Pages once Pages is enabled
+and the `PAGES_ENABLED` repository variable is set — see
+[`docs/dbt/README.md`](docs/dbt/README.md).
+
+![dbt lineage for fct_orders](docs/screenshots/dbt-lineage.png)
+
 | Layer | Materialization | Models |
 |---|---|---|
 | staging | view | `stg_customers`, `stg_products`, `stg_orders`, `stg_order_items`, `stg_payments`, `stg_returns` — dedupe on natural keys, cast, normalize |

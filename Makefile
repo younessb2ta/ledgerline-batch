@@ -14,7 +14,7 @@ DBT = cd warehouse && $(UV) run dbt
 DBT_FLAGS ?= --profiles-dir .
 
 .PHONY: install hooks test lint fmt gen gen-day load validate \
-	dbt-debug dbt-run dbt-test dbt-build dbt-docs clean
+	dbt-debug dbt-run dbt-test dbt-build dbt-docs dbt-docs-serve docs-site clean
 
 install:
 	$(UV) sync
@@ -62,6 +62,14 @@ dbt-build:
 
 dbt-docs:
 	$(DBT) docs generate $(DBT_FLAGS)
+
+dbt-docs-serve:
+	$(DBT) docs serve $(DBT_FLAGS)
+
+docs-site: dbt-docs
+	mkdir -p docs/dbt
+	cp warehouse/target/index.html warehouse/target/manifest.json \
+		warehouse/target/catalog.json docs/dbt/
 
 clean:
 	rm -rf data/raw .pytest_cache .ruff_cache warehouse/target warehouse/logs

@@ -1,0 +1,44 @@
+name: docs
+
+# Publishes the committed dbt docs site in docs/dbt/ to GitHub Pages.
+#
+# One-time setup:
+#   1. Settings -> Pages -> Build and deployment -> Source: GitHub Actions
+#   2. Settings -> Secrets and variables -> Actions -> Variables ->
+#      add PAGES_ENABLED = true
+#
+# The guard keeps the workflow green until Pages is enabled. Refresh the
+# committed site locally with `make docs-site` whenever models or tests change.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/dbt/**
+      - .github/workflows/docs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ vars.PAGES_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dbt
+      - id: deployment
+        uses: actions/deploy-pages@v4
