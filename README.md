@@ -182,6 +182,36 @@ Each day is written to `data/raw/<YYYY-MM-DD>/`:
 - Per-day RNG is seeded with `"<seed>:<day>"`, so days are independent and reproducible.
 - Manifests contain no timestamps, so two runs of the same seed produce byte-identical hashes.
 
+## Known limitations
+
+- **Sandbox, not production BigQuery.** There is no DML and no streaming
+  insert, so the batch path is idempotent through load jobs plus
+  `CREATE OR REPLACE` rebuilds rather than incremental `MERGE`. A production
+  version would partition the facts and use incremental models.
+- **Local Terraform state.** No remote backend or locking, and a single
+  operator. The modules are structured so moving to a GCS backend is a small
+  diff, but it is not claimed here.
+- **Orchestration is GitHub Actions or local Airflow, not Composer.** The
+  wrapper handles one day at a time; there is no dependency-aware scheduler,
+  automatic backfill, or SLA alerting beyond the alert policy in `dq/`.
+- **The volume band is a trailing average with a fixed tolerance**, not a
+  seasonal model or median/MAD. It needs a few days of history before it can
+  alarm, and a slow multi-day decline can stay inside the band.
+- **Demo-scale data.** At 800 orders/day the partition/clustering experiment
+  shows a $0 delta because of BigQuery's 10 MB per-statement billing floor. The
+  benchmark measures that honestly instead of extrapolating.
+- **The batch path is not late-aware.** Events that miss a day's extract land in
+  the next one; the streaming path is where lateness is classified and
+  restated.
+
+### What I'd do differently
+
+Start with the remote Terraform backend and WIF from the first commit instead of
+retrofitting them, and write the volume check against a seasonal baseline rather
+than a flat trailing average. I would also keep the generator as a separate
+published package from day one — the streaming repo consumes it as an editable
+sibling path, which is convenient locally and awkward in CI.
+
 ## Layout
 
 ```
