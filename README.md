@@ -27,7 +27,8 @@ Phase 0 exit criteria:
 
 ## Quickstart
 
-Requires `uv` (https://docs.astral.sh/uv/).
+Requires `uv` (https://docs.astral.sh/uv/). The 3-minute recording guide is in
+[`docs/demo-script.md`](docs/demo-script.md).
 
 ```bash
 make install          # uv sync (creates .venv, installs eventforge + pytest)
