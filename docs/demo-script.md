@@ -34,7 +34,7 @@ Recording setup: 1080p or 1440p, terminal at ≥ 16 pt, notifications off,
 | 0:20–0:40 | `README.md` architecture fence; scroll the four stages. | "Generation, a Great Expectations gate, BigQuery sandbox, then dbt staging to marts. Every stage is a command, and every claim has a committed artifact." |
 | 0:40–1:05 | `make gen` (already run), then `uv run python -m json.tool data/raw/2026-11-01/manifest.json \| head -30`. | "Same seed, same bytes: 800 orders, 2,050 line items, 2,870 events, and a manifest with sha256 per file. The event IDs are UUIDv5, so a replay is provably identical." |
 | 1:05–1:30 | `make validate`, clean day. Show the last PASS lines. | "Gate one checks the contract before anything is loaded: column sets, key uniqueness, accepted values, non-negative money, and volume against ground truth." |
-| 1:30–1:55 | `uv run eventforge batch --seed 42 --start 2026-11-05 --days 1 --out data/raw --incident truncated --truncate-pct 0.6`, then `ingest.validate` on that day. Show the four failing volume rows. | "Now the same pipeline with a truncated extract. The manifest agrees with the files, so schema checks pass — only the comparison with ground truth catches it. No rows are loaded." |
+| 1:30–1:55 | `uv run eventforge batch --seed 99 --start 2026-11-05 --days 1 --out data/raw --incident truncated --truncate-pct 0.4`, then `ingest.validate` on that day. Show the four failing volume rows: 480/800 orders, 1,189/1,965 items, 462/774 payments, 14/27 returns. | "Now the same pipeline with a truncated extract. The manifest agrees with the files, so schema checks pass — only the comparison with ground truth catches it. Four tables fail their volume band and no rows are loaded." |
 | 1:55–2:10 | `docs/runbooks/gx-gate-failure.md`; scroll the alert payload. | "The alert names the runbook, and the runbook says how to confirm the source, rerun the day, and prove recovery. That path is tested locally with Slack unset." |
 | 2:10–2:35 | `make dbt-build` output, then `dbt docs serve` lineage graph. | "Gate two runs after the transform: 57 tests on grains, relationships, financial invariants, freshness, and a volume band. A fan-out drill in the repo shows the grain test stopping publication." |
 | 2:35–2:52 | `bench/report.md`; highlight 0.72 GiB billed, 35 s, $0.00441, monthly $0.30. | "Cost is measured from BigQuery job metadata, not estimated. A full build bills under a gigabyte; the monthly projection is thirty cents, and the sandbox uses about two percent of its free query allowance." |
@@ -48,8 +48,9 @@ Recording setup: 1080p or 1440p, terminal at ≥ 16 pt, notifications off,
   `1a63685fd48c1932…`.
 - 72 dbt nodes: 13 models and 57 tests.
 - One build: 0.72 GiB billed, ~35 s, $0.00441; monthly projection $0.30.
-- Truncated incident: 480/800 orders, 1,189/1,965 items, 462/774 payments,
-  14/27 returns; four failed expectations.
+- Truncated incident: batch `20261105-99` uses seed 99 and `truncate_pct=0.4`
+  (the clean demo day above uses seed 42). Observed 480/800 orders,
+  1,189/1,965 items, 462/774 payments, 14/27 returns; four failed expectations.
 
 ## If you only have 90 seconds
 

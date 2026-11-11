@@ -114,8 +114,8 @@ asserts that this mode fails the gate.
 ## Recovery
 
 ```bash
-# 1. regenerate the day without the fault
-uv run eventforge batch --seed 42 --start 2026-11-05 --days 1 --out data/raw
+# 1. regenerate the day without the fault (same seed as batch 20261105-99)
+uv run eventforge batch --seed 99 --start 2026-11-05 --days 1 --out data/raw
 
 # 2. gate the corrected extract (read-only; no writes to raw)
 uv run python -m ingest.validate \
