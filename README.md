@@ -227,3 +227,7 @@ docs/adr/                architecture decision records
 docs/incidents/          postmortem and game-day drill
 docs/runbooks/           on-call triage and recovery per alert
 ```
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
