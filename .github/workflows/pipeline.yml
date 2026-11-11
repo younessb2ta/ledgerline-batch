@@ -21,6 +21,9 @@ concurrency:
 
 jobs:
   batch:
+    # Stay green on a fresh clone: the schedule fires even before the GCP
+    # variables below exist, and WIF auth would fail with empty values.
+    if: ${{ vars.GCP_PROJECT != '' }}
     runs-on: ubuntu-latest
     env:
       GCP_PROJECT: ${{ vars.GCP_PROJECT }}
