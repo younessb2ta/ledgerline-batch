@@ -1,6 +1,10 @@
 # ledgerline-batch
 
+[![ci](https://github.com/younessb2ta/ledgerline-batch/actions/workflows/ci.yml/badge.svg)](https://github.com/younessb2ta/ledgerline-batch/actions/workflows/ci.yml)
+[![docs](https://github.com/younessb2ta/ledgerline-batch/actions/workflows/docs.yml/badge.svg)](https://younessb2ta.github.io/ledgerline-batch/)
+
 Batch ELT, warehouse models, and data quality for the Ledgerline platform.
+Live dbt lineage: <https://younessb2ta.github.io/ledgerline-batch/>
 
 ```
 eventforge ──► local CSV + manifest ──► GX gate ──► BigQuery sandbox raw ──► dbt (staging → marts)
