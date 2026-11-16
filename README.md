@@ -16,7 +16,7 @@ eventforge ──► local CSV + manifest ──► GX gate ──► BigQuery s
 
 The default path is **zero-cost**: BigQuery sandbox (no billing account), local file loads, local Terraform state. GCS and Composer are optional paid upgrades — see `infra/README.md`.
 
-This repo contains **Phases 0–5**: the deterministic generator, the zero-cost Terraform layout, the ingestion path with its Great Expectations gate, the dbt star schema, the operational layer (freshness/volume gates, Slack alerting, runbooks, orchestration), and the evidence package (measured cost benchmark, ADRs, incident postmortem and game-day drill). The real-time path (Phases 6–8) lives in [`../ledgerline-stream`](../ledgerline-stream) and consumes the same `eventforge` generator.
+This repo contains **Phases 0–5**: the deterministic generator, the zero-cost Terraform layout, the ingestion path with its Great Expectations gate, the dbt star schema, the operational layer (freshness/volume gates, Slack alerting, runbooks, orchestration), and the evidence package (measured cost benchmark, ADRs, incident postmortem and game-day drill). The real-time path (Phases 6–8) lives in [`ledgerline-stream`](https://github.com/younessb2ta/ledgerline-stream) and consumes the same `eventforge` generator.
 
 Phase 0 exit criteria:
 
@@ -27,7 +27,7 @@ Phase 0 exit criteria:
 - [x] `schema_drift`, `duplicate_pk`, `stale` each produce a plausible single failure
 - [x] toolchain installed: uv/Python 3.11, Terraform 1.17, JDK 17, Maven 3.10, gcloud 592 — see `../docs/toolchain.md`
 - [x] commits authored as `younessb2ta <youness.bgamer@gmail.com>` (via Dulwich until Xcode CLT is restored)
-- [x] Docker not required: macOS 12 lacks it, so the streaming phase runs Kafka, Flink, and Postgres natively from tarballs — see [`../ledgerline-stream`](../ledgerline-stream)
+- [x] Docker not required: macOS 12 lacks it, so the streaming phase runs Kafka, Flink, and Postgres natively from tarballs — see [`ledgerline-stream`](https://github.com/younessb2ta/ledgerline-stream)
 
 ## Quickstart
 
